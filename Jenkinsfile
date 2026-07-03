@@ -49,19 +49,20 @@ pipeline {
         }
 
         stage('Update Manifest for ArgoCD') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS}",
-                        usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
-                    sh """
-                        sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
-                        git config user.email "ci@jenkins.local"
-                        git config user.name "jenkins-ci"
-                        git add k8s/deployment.yaml
-                        git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
-                        git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp.git main
-                    """
-                }
-            }
+    steps {
+        withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS}",
+                usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+            sh """
+                sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
+                git config user.email "ci@jenkins.local"
+                git config user.name "jenkins-ci"
+                git checkout -B main
+                git add k8s/deployment.yaml
+                git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
+                git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp.git HEAD:main
+            """
         }
+    }
+}
     }
 }
