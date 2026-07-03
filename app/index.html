@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DevOps Web App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">🚀 DevOps App</div>
+    <ul>
+      <li><a href="#">Home</a></li>
+      <li><a href="#">Pipeline</a></li>
+      <li><a href="#">Status</a></li>
+    </ul>
+  </nav>
+
+  <div class="hero">
+    <h1>CI/CD Pipeline Demo</h1>
+    <p>Automated build, scan, and deploy using modern DevOps tools</p>
+    <button onclick="showPipeline()">View Pipeline</button>
+  </div>
+
+  <div class="pipeline" id="pipeline">
+    <div class="stage">
+      <div class="icon">📦</div>
+      <div class="label">GitHub</div>
+      <div class="desc">Source Code</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="icon">⚙️</div>
+      <div class="label">Jenkins</div>
+      <div class="desc">CI Pipeline</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="icon">🔍</div>
+      <div class="label">SonarQube</div>
+      <div class="desc">Code Quality</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="icon">🐳</div>
+      <div class="label">Docker</div>
+      <div class="desc">Build & Push</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="icon">☸️</div>
+      <div class="label">Kubernetes</div>
+      <div class="desc">Orchestration</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="stage">
+      <div class="icon">🔄</div>
+      <div class="label">ArgoCD</div>
+      <div class="desc">GitOps Deploy</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>⚙️ Jenkins</h3>
+      <p>Automates build and deployment pipeline on every code push.</p>
+      <span class="badge green">Active</span>
+    </div>
+    <div class="card">
+      <h3>🔍 SonarQube</h3>
+      <p>Scans code for bugs, vulnerabilities and code smells.</p>
+      <span class="badge green">Passing</span>
+    </div>
+    <div class="card">
+      <h3>🐳 Docker</h3>
+      <p>Packages the app into a portable container image.</p>
+      <span class="badge green">Built</span>
+    </div>
+    <div class="card">
+      <h3>☸️ Kubernetes</h3>
+      <p>Manages and scales containers in the cluster.</p>
+      <span class="badge green">Running</span>
+    </div>
+  </div>
+
+  <footer>
+    <p>Deployed via GitHub → Jenkins → SonarQube → Docker → Kubernetes → ArgoCD</p>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
