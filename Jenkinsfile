@@ -10,10 +10,24 @@ pipeline {
     }
 
     stages {
-        stage('SonarQube Analysis') {
-            when {
-                branch 'main'
+        stage('Check Commit Author') {
+            steps {
+                script {
+                    def author = sh(
+                        script: "git log -1 --pretty=format:'%an'",
+                        returnStdout: true
+                    ).trim()
+                    echo "Commit author: ${author}"
+                    if (author == 'jenkins-ci') {
+                        echo "Skipping — Jenkins own commit"
+                        currentBuild.result = 'NOT_BUILT'
+                        error("Jenkins own commit — aborting")
+                    }
+                }
             }
+        }
+
+        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh """
@@ -27,27 +41,18 @@ pipeline {
         }
 
         stage('Quality Gate') {
-            when {
-                branch 'main'
-            }
             steps {
                 echo 'SonarQube analysis submitted'
             }
         }
 
         stage('Build Docker Image') {
-            when {
-                branch 'main'
-            }
             steps {
                 sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
             }
         }
 
         stage('Push Image') {
-            when {
-                branch 'main'
-            }
             steps {
                 withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS}",
                         usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -60,17 +65,15 @@ pipeline {
         }
 
         stage('Update Manifest for ArgoCD') {
-            when {
-                branch 'main'
-            }
             steps {
                 withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS}",
                         usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                     sh """
-                        sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
                         git config user.email "ci@jenkins.local"
                         git config user.name "jenkins-ci"
-                        git checkout -B main
+                        git fetch origin main
+                        git checkout -B main origin/main
+                        sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
                         git add k8s/deployment.yaml
                         git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
                         git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp.git HEAD:main
@@ -85,7 +88,7 @@ pipeline {
             echo "Pipeline succeeded — image ${DOCKER_IMAGE}:${IMAGE_TAG} deployed"
         }
         failure {
-            echo "Pipeline failed — check logs above"
+            echo "Pipeline failed"
         }
     }
 }
