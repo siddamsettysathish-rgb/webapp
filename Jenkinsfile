@@ -66,27 +66,24 @@ pipeline {
         }
 
         stage('Update Manifest for ArgoCD') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: "${GIT_CREDENTIALS}",
-                    usernameVariable: 'GIT_USER',
-                    passwordVariable: 'GIT_PASS')]) {
-                    sh """
-                        rm -rf webapp-manifests
-                        git clone https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp-manifests.git
-                        cd webapp-manifests
-                        sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
-                        git config user.email "ci@jenkins.local"
-                        git config user.name "jenkins-ci"
-                        git add k8s/deployment.yaml
-                        git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
-                        git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp-manifests.git main
-                        cd ..
-                        rm -rf webapp-manifests
-                    """
-                }
-            }
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: "${GIT_CREDENTIALS}",
+            usernameVariable: 'GIT_USER',
+            passwordVariable: 'GIT_PASS')]) {
+            sh """
+                git config user.email "ci@jenkins.local"
+                git config user.name "jenkins-ci"
+                git fetch origin main
+                git checkout -B main origin/main
+                sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
+                git add k8s/deployment.yaml
+                git commit -m "Update image to ${IMAGE_TAG} [skip ci]" || echo "No changes"
+                git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp.git HEAD:main
+            """
         }
+    }
+}
     }
 
     post {
