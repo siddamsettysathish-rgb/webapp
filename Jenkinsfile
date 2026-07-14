@@ -1,32 +1,30 @@
 pipeline {
     agent any
 
-   environment {
-    DOCKER_IMAGE = "sathishsiddamsetty/webapp"
-    IMAGE_TAG = "${env.BUILD_NUMBER}"
-    REGISTRY_CREDENTIALS = "dockerhub-creds"
-    GIT_CREDENTIALS = "Github-Token"
-    SONAR_SCANNER_HOME = tool('SonarScanner')
-    SKIP_PIPELINE = "false"
-}
+    environment {
+        DOCKER_IMAGE = "sathishsiddamsetty/webapp"
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        REGISTRY_CREDENTIALS = "dockerhub-creds"
+        GIT_CREDENTIALS = "Github-Token"
+        SONAR_SCANNER_HOME = tool 'SonarScanner'
+    }
 
-    stage('Check Commit Author') {
-    steps {
-        script {
-            def author = sh(
-                script: "git log -1 --pretty=format:%an",
-                returnStdout: true
-            ).trim()
-
-            echo "Commit author: ${author}"
-
-            if (author == "jenkins-ci") {
-                env.SKIP_PIPELINE = "true"
-                echo "Skipping remaining stages because this is a Jenkins commit."
+    stages {
+        stage('Check Commit Author') {
+            steps {
+                script {
+                    def author = sh(
+                        script: "git log -1 --pretty=format:%an",
+                        returnStdout: true
+                    ).trim()
+                    echo "Commit author: ${author}"
+                    if (author == 'jenkins-ci') {
+                        currentBuild.result = 'NOT_BUILT'
+                        error("Jenkins own commit — skipping pipeline")
+                    }
+                }
             }
         }
-    }
-}
 
         stage('SonarQube Analysis') {
             steps {
@@ -55,8 +53,10 @@ pipeline {
 
         stage('Push Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS}",
-                        usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: "${REGISTRY_CREDENTIALS}",
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS')]) {
                     sh """
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
@@ -67,8 +67,10 @@ pipeline {
 
         stage('Update Manifest for ArgoCD') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS}",
-                        usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: "${GIT_CREDENTIALS}",
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_PASS')]) {
                     sh """
                         git config user.email "ci@jenkins.local"
                         git config user.name "jenkins-ci"
