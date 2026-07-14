@@ -2,31 +2,39 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "yourdockerhubuser/website"
+        DOCKER_IMAGE = "sathishsiddamsetty/webapp"
         IMAGE_TAG = "${env.BUILD_NUMBER}"
         REGISTRY_CREDENTIALS = "dockerhub-creds"
-        GIT_CREDENTIALS = "github-creds"
+        GIT_CREDENTIALS = "Github-Token"
+        SONAR_SCANNER_HOME = tool 'SonarScanner'
     }
 
     stages {
-        stage('Checkout') {
+
+        stage('SonarQube Analysis') {
             steps {
-                git branch: 'main', url: 'https://github.com/yourusername/website.git'
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                        ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectKey=webapp \
+                        -Dsonar.sources=app \
+                        -Dsonar.host.url=http://sonarqube:9000
+                    """
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
-            }
-        }
-
-        stage('Trivy Scan') {
-            steps {
-                sh """
-                    trivy image --severity HIGH,CRITICAL --exit-code 1 \
-                    --format table ${DOCKER_IMAGE}:${IMAGE_TAG}
-                """
             }
         }
 
@@ -52,7 +60,7 @@ pipeline {
                         git config user.name "jenkins-ci"
                         git add k8s/deployment.yaml
                         git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
-                        git push https://${GIT_USER}:${GIT_PASS}@github.com/yourusername/website.git main
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp.git main
                     """
                 }
             }
