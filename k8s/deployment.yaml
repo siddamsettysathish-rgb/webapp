@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: webapp
-          image: sathishsiddamsetty/webapp:13
+          image: sathishsiddamsetty/webapp:14
           imagePullPolicy: Always
           ports:
             - containerPort: 80
