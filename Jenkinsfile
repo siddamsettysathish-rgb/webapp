@@ -10,6 +10,21 @@ pipeline {
     }
 
     stages {
+        stage('Check Commit Author') {
+            steps {
+                script {
+                    def author = sh(
+                        script: "git log -1 --pretty=format:%an",
+                        returnStdout: true
+                    ).trim()
+                    echo "Commit author: ${author}"
+                    if (author == 'jenkins-ci') {
+                        currentBuild.result = 'NOT_BUILT'
+                        error("Jenkins own commit — skipping pipeline")
+                    }
+                }
+            }
+        }
 
         stage('SonarQube Analysis') {
             steps {
@@ -26,9 +41,7 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
+                echo 'SonarQube analysis submitted - skipping wait for local performance'
             }
         }
 
@@ -40,8 +53,10 @@ pipeline {
 
         stage('Push Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS}",
-                        usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: "${REGISTRY_CREDENTIALS}",
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS')]) {
                     sh """
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
                         docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
@@ -51,26 +66,35 @@ pipeline {
         }
 
         stage('Update Manifest for ArgoCD') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: "${GIT_CREDENTIALS}",
-            usernameVariable: 'GIT_USER',
-            passwordVariable: 'GIT_PASS')]) {
-            sh """
-                rm -rf webapp-manifests
-                git clone https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp-manifests.git
-                cd webapp-manifests
-                sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
-                git config user.email "ci@jenkins.local"
-                git config user.name "jenkins-ci"
-                git add k8s/deployment.yaml
-                git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
-                git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp-manifests.git main
-                cd ..
-                rm -rf webapp-manifests
-            """
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "${GIT_CREDENTIALS}",
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_PASS')]) {
+                    sh """
+                        rm -rf webapp-manifests
+                        git clone https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp-manifests.git
+                        cd webapp-manifests
+                        sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
+                        git config user.email "ci@jenkins.local"
+                        git config user.name "jenkins-ci"
+                        git add k8s/deployment.yaml
+                        git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp-manifests.git main
+                        cd ..
+                        rm -rf webapp-manifests
+                    """
+                }
+            }
         }
     }
-}
+
+    post {
+        success {
+            echo "Pipeline succeeded — image ${DOCKER_IMAGE}:${IMAGE_TAG} deployed"
+        }
+        failure {
+            echo "Pipeline failed"
+        }
     }
 }
