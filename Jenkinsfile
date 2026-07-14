@@ -11,20 +11,20 @@ pipeline {
 
     stages {
         stage('Check Commit Author') {
-            steps {
-                script {
-                    def author = sh(
-                        script: "git log -1 --pretty=format:%an",
-                        returnStdout: true
-                    ).trim()
-                    echo "Commit author: ${author}"
-                    if (author == 'jenkins-ci') {
-                        currentBuild.result = 'NOT_BUILT'
-                        error("Jenkins own commit — skipping pipeline")
-                    }
-                }
+    steps {
+        script {
+            def author = sh(
+                script: "git log -1 --pretty=format:%an",
+                returnStdout: true
+            ).trim()
+            echo "Commit author: ${author}"
+            if (author == 'jenkins-ci') {
+                currentBuild.result = 'NOT_BUILT'
+                throw new InterruptedException("Jenkins own commit — skipping")
             }
         }
+    }
+}
 
         stage('SonarQube Analysis') {
             steps {
