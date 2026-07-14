@@ -33,29 +33,38 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            when {
-                expression {
-                    env.SKIP_BUILD != 'true'
-                }
-            }
-            steps {
-                echo 'Running SonarQube analysis'
-                // Your SonarQube commands
-            }
+    when {
+        expression {
+            env.SKIP_BUILD != 'true'
         }
+    }
 
-        stage('Quality Gate') {
-            when {
-                expression {
-                    env.SKIP_BUILD != 'true'
-                }
-            }
-            steps {
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
+    steps {
+        script {
+            def scannerHome = tool 'SonarScanner'
+
+            withSonarQubeEnv('SonarQube') {
+                sh """
+                    ${scannerHome}/bin/sonar-scanner
+                """
             }
         }
+    }
+}
+
+stage('Quality Gate') {
+    when {
+        expression {
+            env.SKIP_BUILD != 'true'
+        }
+    }
+
+    steps {
+        timeout(time: 10, unit: 'MINUTES') {
+            waitForQualityGate abortPipeline: true
+        }
+    }
+}
 
         stage('Build Docker Image') {
             when {
