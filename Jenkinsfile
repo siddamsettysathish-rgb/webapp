@@ -10,22 +10,6 @@ pipeline {
     }
 
     stages {
-        stage('Check Commit Author') {
-            steps {
-                script {
-                    def author = sh(
-                        script: "git log -1 --pretty=format:%an",
-                        returnStdout: true
-                    ).trim()
-                    echo "Commit author: ${author}"
-                    if (author == 'jenkins-ci') {
-                        currentBuild.result = 'NOT_BUILT'
-                        error("Jenkins own commit — skipping pipeline")
-                    }
-                }
-            }
-        }
-
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
@@ -41,7 +25,7 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                echo 'SonarQube analysis submitted - skipping wait for local performance'
+                echo 'SonarQube analysis submitted'
             }
         }
 
@@ -66,24 +50,24 @@ pipeline {
         }
 
         stage('Update Manifest for ArgoCD') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: "${GIT_CREDENTIALS}",
-            usernameVariable: 'GIT_USER',
-            passwordVariable: 'GIT_PASS')]) {
-            sh """
-                git config user.email "ci@jenkins.local"
-                git config user.name "jenkins-ci"
-                git fetch origin main
-                git checkout -B main origin/main
-                sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
-                git add k8s/deployment.yaml
-                git commit -m "Update image to ${IMAGE_TAG} [skip ci]" || echo "No changes"
-                git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp.git HEAD:main
-            """
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: "${GIT_CREDENTIALS}",
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_PASS')]) {
+                    sh """
+                        git config user.email "ci@jenkins.local"
+                        git config user.name "jenkins-ci"
+                        git fetch origin main
+                        git checkout -B main origin/main
+                        sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
+                        git add k8s/deployment.yaml
+                        git commit -m "Update image to ${IMAGE_TAG} [skip ci]" || echo "No changes"
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp.git HEAD:main
+                    """
+                }
+            }
         }
-    }
-}
     }
 
     post {
