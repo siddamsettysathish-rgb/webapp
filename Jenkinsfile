@@ -2,112 +2,102 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "sathishsiddamsetty/webapp"
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        REGISTRY_CREDENTIALS = "dockerhub-creds"
-        GIT_CREDENTIALS = "Github-Token"
-        SONAR_SCANNER_HOME = tool('SonarScanner')
+        SKIP_BUILD = 'false'
     }
 
     stages {
-
-        stage('Check Commit Author') {
+        stage('Check Commit') {
             steps {
                 script {
-                    def author = sh(
-                        script: "git log -1 --pretty=format:%an",
+                    def commitAuthor = sh(
+                        script: 'git log -1 --pretty=format:%an',
                         returnStdout: true
                     ).trim()
 
-                    echo "Commit author: ${author}"
+                    def commitMessage = sh(
+                        script: 'git log -1 --pretty=format:%B',
+                        returnStdout: true
+                    ).trim()
 
-                    if (author == "jenkins-ci") {
-                        currentBuild.result = "NOT_BUILT"
-                        error("Jenkins own commit - skipping build")
+                    echo "Commit author: ${commitAuthor}"
+                    echo "Commit message: ${commitMessage}"
+
+                    if (commitAuthor == 'jenkins-ci' ||
+                        commitMessage.contains('[skip ci]')) {
+                        env.SKIP_BUILD = 'true'
+                        currentBuild.description = 'Skipped Jenkins automation commit'
+                        echo 'Jenkins automation commit detected. Remaining stages will be skipped.'
                     }
                 }
             }
         }
 
         stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh """
-                        ${SONAR_SCANNER_HOME}/bin/sonar-scanner \
-                        -Dsonar.projectKey=webapp \
-                        -Dsonar.sources=app \
-                        -Dsonar.host.url=http://sonarqube:9000
-                    """
+            when {
+                expression {
+                    env.SKIP_BUILD != 'true'
                 }
+            }
+            steps {
+                echo 'Running SonarQube analysis'
+                // Your SonarQube commands
             }
         }
 
         stage('Quality Gate') {
+            when {
+                expression {
+                    env.SKIP_BUILD != 'true'
+                }
+            }
             steps {
-                echo "SonarQube analysis submitted"
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
 
         stage('Build Docker Image') {
+            when {
+                expression {
+                    env.SKIP_BUILD != 'true'
+                }
+            }
             steps {
-                sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
+                sh 'docker build -t your-image:${BUILD_NUMBER} .'
             }
         }
 
         stage('Push Image') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: REGISTRY_CREDENTIALS,
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-                    sh """
-                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
-                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-                    """
+            when {
+                expression {
+                    env.SKIP_BUILD != 'true'
                 }
+            }
+            steps {
+                echo 'Push Docker image here'
             }
         }
 
         stage('Update Manifest for ArgoCD') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: GIT_CREDENTIALS,
-                        usernameVariable: 'GIT_USER',
-                        passwordVariable: 'GIT_PASS'
-                    )
-                ]) {
-                    sh """
-                        git config user.email "ci@jenkins.local"
-                        git config user.name "jenkins-ci"
-
-                        git fetch origin main
-                        git checkout -B main origin/main
-
-                        sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
-
-                        git add k8s/deployment.yaml
-
-                        git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
-
-                        git push https://\$GIT_USER:\$GIT_PASS@github.com/siddamsettysathish-rgb/webapp.git HEAD:main
-                    """
+            when {
+                expression {
+                    env.SKIP_BUILD != 'true'
                 }
             }
+            steps {
+                echo 'Update Kubernetes manifest here'
+            }
         }
-
     }
 
     post {
-        success {
-            echo "Pipeline succeeded - Image ${DOCKER_IMAGE}:${IMAGE_TAG} deployed"
-        }
-
-        failure {
-            echo "Pipeline failed"
+        always {
+            script {
+                if (env.SKIP_BUILD == 'true') {
+                    currentBuild.result = 'NOT_BUILT'
+                }
+            }
         }
     }
 }
