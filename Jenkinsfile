@@ -2,109 +2,58 @@ pipeline {
     agent any
 
     environment {
-        SKIP_BUILD = 'false'
+        DOCKER_IMAGE = "yourdockerhubuser/website"
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        REGISTRY_CREDENTIALS = "dockerhub-creds"
+        GIT_CREDENTIALS = "github-creds"
     }
 
     stages {
-        stage('Check Commit') {
+        stage('Checkout') {
             steps {
-                script {
-                    def commitAuthor = sh(
-                        script: 'git log -1 --pretty=format:%an',
-                        returnStdout: true
-                    ).trim()
-
-                    def commitMessage = sh(
-                        script: 'git log -1 --pretty=format:%B',
-                        returnStdout: true
-                    ).trim()
-
-                    echo "Commit author: ${commitAuthor}"
-                    echo "Commit message: ${commitMessage}"
-
-                    if (commitAuthor == 'jenkins-ci' ||
-                        commitMessage.contains('[skip ci]')) {
-                        env.SKIP_BUILD = 'true'
-                        currentBuild.description = 'Skipped Jenkins automation commit'
-                        echo 'Jenkins automation commit detected. Remaining stages will be skipped.'
-                    }
-                }
+                git branch: 'main', url: 'https://github.com/yourusername/website.git'
             }
         }
-
-        stage('SonarQube Analysis') {
-    when {
-        expression {
-            env.SKIP_BUILD != 'true'
-        }
-    }
-
-    steps {
-        script {
-            def scannerHome = tool 'SonarScanner'
-
-            withSonarQubeEnv('SonarQube') {
-                sh """
-                    ${scannerHome}/bin/sonar-scanner
-                """
-            }
-        }
-    }
-}
-
-stage('Quality Gate') {
-    when {
-        expression {
-            env.SKIP_BUILD != 'true'
-        }
-    }
-
-    steps {
-        timeout(time: 10, unit: 'MINUTES') {
-            waitForQualityGate abortPipeline: true
-        }
-    }
-}
 
         stage('Build Docker Image') {
-            when {
-                expression {
-                    env.SKIP_BUILD != 'true'
-                }
-            }
             steps {
-                sh 'docker build -t your-image:${BUILD_NUMBER} .'
+                sh "docker build -t ${DOCKER_IMAGE}:${IMAGE_TAG} ."
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                sh """
+                    trivy image --severity HIGH,CRITICAL --exit-code 1 \
+                    --format table ${DOCKER_IMAGE}:${IMAGE_TAG}
+                """
             }
         }
 
         stage('Push Image') {
-            when {
-                expression {
-                    env.SKIP_BUILD != 'true'
-                }
-            }
             steps {
-                echo 'Push Docker image here'
+                withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS}",
+                        usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
+                    """
+                }
             }
         }
 
         stage('Update Manifest for ArgoCD') {
-            when {
-                expression {
-                    env.SKIP_BUILD != 'true'
-                }
-            }
             steps {
-                echo 'Update Kubernetes manifest here'
-            }
-        }
-    }
-
-    post {
-        always {
-            script {
-                if (env.SKIP_BUILD == 'true') {
-                    currentBuild.result = 'NOT_BUILT'
+                withCredentials([usernamePassword(credentialsId: "${GIT_CREDENTIALS}",
+                        usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    sh """
+                        sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
+                        git config user.email "ci@jenkins.local"
+                        git config user.name "jenkins-ci"
+                        git add k8s/deployment.yaml
+                        git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/yourusername/website.git main
+                    """
                 }
             }
         }
