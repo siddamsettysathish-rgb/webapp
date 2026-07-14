@@ -2,124 +2,118 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>WEB  APP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DevOps Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
-  <!-- New Section -->
-    <div class="cards">
-      <div class="card">
-        <h3>📊 MONITORING& watching</h3>
-        <p>Real-time metrics and alerts for your infrastructure.</p>
-        <span class="badge green">Active</span>
-      </div>
-      <div class="card">
-        <h3>🔒 Security& Risk</h3>
-        <p>Automated security scanning on every code push.</p>
-        <span class="badge green">Enabled</span>
-      </div>
-      <div class="card">
-        <h3>📈 Scaling & Monitoring</h3>
-        <p>Auto-scales based on traffic demand.</p>
-        <span class="badge green">Ready</span>
-      </div>
-      <div class="card">
-        <h3>🔔 Alerts& Notification</h3>
-        <p>Instant notifications on deployment success or failure.</p>
-        <span class="badge green">On</span>
-      </div>
-    </div>
 <body>
-  <nav class="navbar">
-    <div class="logo">🚀 App</div>
-    <ul>
-      <li><a href="#">Home</a></li>
-      <li><a href="#">Pipeline</a></li>
-      <li><a href="#">Status</a></li>
-    </ul>
-  </nav>
+  <div class="dashboard">
 
-  <div class="hero">
-    <h1>Demo</h1>
-    <p>Automated build, scan, and deploy using modern DevOps tools</p>
-    <button onclick="showPipeline()">View Pipeline</button>
+    <!-- Top Left: News -->
+    <div class="card news-card">
+      <div class="card-header">
+        <span class="logo">𝕿</span>
+        <span class="source">THE NEW YORK TIMES</span>
+      </div>
+      <h2 class="headline">DevOps Pipeline Successfully Deployed to Kubernetes</h2>
+      <p class="sub-headline">Next: ArgoCD GitOps sync completes in under 30 seconds</p>
+    </div>
+
+    <!-- Top Right: Sports -->
+    <div class="card sports-card">
+      <div class="card-header">
+        <span class="source">BBC SPORT — DEVOPS NEWS</span>
+        <span class="bbc-logo">BBC</span>
+      </div>
+      <ul class="news-list">
+        <li>🔵 Jenkins pipeline completes all 5 stages successfully</li>
+        <li>🔵 SonarQube Quality Gate passes with zero critical issues</li>
+        <li>🔵 Docker image pushed to DockerHub — tag :50</li>
+        <li>🔵 ArgoCD detects manifest change and auto-syncs cluster</li>
+        <li>🔵 Kubernetes rolling update completes with zero downtime</li>
+        <li>🔵 Pod deletion test passed — app stayed alive throughout</li>
+      </ul>
+    </div>
+
+    <!-- Center: Clock -->
+    <div class="clock-wrapper">
+      <div class="clock">
+        <div class="clock-label">IST TIME</div>
+        <div class="clock-time" id="clock">00:00 AM</div>
+        <div class="clock-date" id="date">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Bottom Left: Quote -->
+    <div class="card quote-card">
+      <div class="card-header">
+        <span class="source">DEVOPS QUOTE</span>
+      </div>
+      <blockquote>
+        "Move fast, deploy safely, monitor everything."
+      </blockquote>
+      <p class="author">~ DevOps Principle</p>
+    </div>
+
+    <!-- Bottom Right: Pipeline Status (like weather) -->
+    <div class="card weather-card">
+      <div class="card-header">
+        <span class="dot"></span>
+        <span class="source">PIPELINE STATUS</span>
+      </div>
+      <div class="city-temp">
+        <span class="city">webapp</span>
+        <span class="temp">✅ Live</span>
+      </div>
+      <p class="condition">All Systems Operational</p>
+
+      <div class="weather-grid">
+        <div class="weather-item">
+          <div class="w-label">IMAGE TAG</div>
+          <div class="w-value">:50</div>
+        </div>
+        <div class="weather-item">
+          <div class="w-label">SONARQUBE</div>
+          <div class="w-value">OK</div>
+        </div>
+        <div class="weather-item">
+          <div class="w-label">PODS</div>
+          <div class="w-value">2/2</div>
+        </div>
+        <div class="weather-item">
+          <div class="w-label">UPTIME</div>
+          <div class="w-value">100%</div>
+        </div>
+        <div class="weather-item">
+          <div class="w-label">JENKINS</div>
+          <div class="w-value">✅</div>
+        </div>
+        <div class="weather-item">
+          <div class="w-label">ARGOCD</div>
+          <div class="w-value">✅</div>
+        </div>
+      </div>
+
+      <div class="forecast">
+        <div class="forecast-item">
+          <div>BUILD</div>
+          <div>✅</div>
+          <div>Pass</div>
+        </div>
+        <div class="forecast-item">
+          <div>SCAN</div>
+          <div>🔍</div>
+          <div>Pass</div>
+        </div>
+        <div class="forecast-item">
+          <div>DEPLOY</div>
+          <div>🚀</div>
+          <div>Live</div>
+        </div>
+      </div>
+    </div>
+
   </div>
-
-  <div class="pipeline" id="pipeline">
-    <div class="stage">
-      <div class="icon">📦</div>
-      <div class="label">GitHub</div>
-      <div class="desc">Source Code</div>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage">
-      <div class="icon">⚙️</div>
-      <div class="label">Jenkins</div>
-      <div class="desc">CI Pipeline</div>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage">
-      <div class="icon">🔍</div>
-      <div class="label">SonarQube</div>
-      <div class="desc">Code Quality</div>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage">
-      <div class="icon">🐳</div>
-      <div class="label">Docker</div>
-      <div class="desc">Build & Push</div>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage">
-      <div class="icon">☸️</div>
-      <div class="label">Kubernetes</div>
-      <div class="desc">Orchestration</div>
-    </div>
-    <div class="arrow">→</div>
-    <div class="stage">
-      <div class="icon">🔄</div>
-      <div class="label">ArgoCD</div>
-      <div class="desc">GitOps Deploy</div>
-    </div>
-  </div>
-
-  <div class="cards">
-    <div class="card">
-      <h3>⚙️ Jenkins</h3>
-      <p>Automates build and deployment pipeline on every code push.</p>
-      <span class="badge green">Active</span>
-    </div>
-    <div class="card">
-      <h3>🔍 SonarQube</h3>
-      <p>Scans code for bugs, vulnerabilities and code smells.</p>
-      <span class="badge green">Passing</span>
-    </div>
-    <div class="card">
-      <h3>🐳 Docker</h3>
-      <p>Packages the app into a portable container image.</p>
-      <span class="badge green">Built</span>
-    </div>
-    <div class="card">
-      <h3>☸️ Kubernetes</h3>
-      <p>Manages and scales containers in the cluster.</p>
-      <span class="badge green">Running</span>
-    </div>
-    <!-- Add this inside the .cards div in index.html -->
-<div class="card">
-  <h3>🚀 Webhook</h3>
-  <p>Jenkins triggered automatically via GitHub webhook on every code push.</p>
-  <span class="badge green">Live</span>
-</div>
-
-<div class="card">
-  <h3>⛵ Helm</h3>
-  <p>Kubernetes deployments managed via Helm charts for easier configuration.</p>
-  <span class="badge green">Enabled</span>
-</div>
-  </div>
-
-  <footer>
-    <p>Deployed via GitHub → Jenkins → SonarQube → Docker → Kubernetes → ArgoCD</p>
-  </footer>
   <script src="app.js"></script>
 </body>
 </html>
