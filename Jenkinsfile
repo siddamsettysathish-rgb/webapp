@@ -3,28 +3,31 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "sathishsiddamsetty/webapp"
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        IMAGE_TAG = "${BUILD_NUMBER}"
         REGISTRY_CREDENTIALS = "dockerhub-creds"
         GIT_CREDENTIALS = "Github-Token"
-        SONAR_SCANNER_HOME = tool 'SonarScanner'
+        SONAR_SCANNER_HOME = tool('SonarScanner')
     }
 
     stages {
+
         stage('Check Commit Author') {
-    steps {
-        script {
-            def author = sh(
-                script: "git log -1 --pretty=format:%an",
-                returnStdout: true
-            ).trim()
-            echo "Commit author: ${author}"
-            if (author == 'jenkins-ci') {
-                currentBuild.result = 'NOT_BUILT'
-                throw new InterruptedException("Jenkins own commit — skipping")
+            steps {
+                script {
+                    def author = sh(
+                        script: "git log -1 --pretty=format:%an",
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Commit author: ${author}"
+
+                    if (author == "jenkins-ci") {
+                        currentBuild.result = "NOT_BUILT"
+                        error("Jenkins own commit - skipping build")
+                    }
+                }
             }
         }
-    }
-}
 
         stage('SonarQube Analysis') {
             steps {
@@ -41,7 +44,7 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                echo 'SonarQube analysis submitted'
+                echo "SonarQube analysis submitted"
             }
         }
 
@@ -53,12 +56,15 @@ pipeline {
 
         stage('Push Image') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: "${REGISTRY_CREDENTIALS}",
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: REGISTRY_CREDENTIALS,
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
                     sh """
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
                         docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
                     """
                 }
@@ -67,29 +73,39 @@ pipeline {
 
         stage('Update Manifest for ArgoCD') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: "${GIT_CREDENTIALS}",
-                    usernameVariable: 'GIT_USER',
-                    passwordVariable: 'GIT_PASS')]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: GIT_CREDENTIALS,
+                        usernameVariable: 'GIT_USER',
+                        passwordVariable: 'GIT_PASS'
+                    )
+                ]) {
                     sh """
                         git config user.email "ci@jenkins.local"
                         git config user.name "jenkins-ci"
+
                         git fetch origin main
                         git checkout -B main origin/main
+
                         sed -i 's|image: .*|image: ${DOCKER_IMAGE}:${IMAGE_TAG}|' k8s/deployment.yaml
+
                         git add k8s/deployment.yaml
+
                         git commit -m "Update image to ${IMAGE_TAG}" || echo "No changes"
-                        git push https://${GIT_USER}:${GIT_PASS}@github.com/siddamsettysathish-rgb/webapp.git HEAD:main
+
+                        git push https://\$GIT_USER:\$GIT_PASS@github.com/siddamsettysathish-rgb/webapp.git HEAD:main
                     """
                 }
             }
         }
+
     }
 
     post {
         success {
-            echo "Pipeline succeeded — image ${DOCKER_IMAGE}:${IMAGE_TAG} deployed"
+            echo "Pipeline succeeded - Image ${DOCKER_IMAGE}:${IMAGE_TAG} deployed"
         }
+
         failure {
             echo "Pipeline failed"
         }
