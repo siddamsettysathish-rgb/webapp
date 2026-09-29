@@ -5,8 +5,8 @@ metadata:
   labels:
     app: webapp
 spec:
-  replicas: 3
-  revisionHistoryLimit: 3
+  replicas: 4
+  revisionHistoryLimit: 4
   selector:
     matchLabels:
       app: webapp
