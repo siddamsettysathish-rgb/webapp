@@ -1,25 +1,39 @@
-replicaCount: 2
+replicaCount: 3
 
 image:
   repository: sathishsiddamsetty/webapp
-  tag: "30"
+  tag: "24"
   pullPolicy: Always
 
 service:
-  type: NodePort
+  type: LoadBalancer
   port: 80
-  nodePort: 30090
 
-readinessProbe:
-  initialDelaySeconds: 5
-  periodSeconds: 3
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
 
-livenessProbe:
-  initialDelaySeconds: 10
-  periodSeconds: 10
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+config:
+  LOG_LEVEL: "info"
+  APP_ENV: "production"
+  FEATURE_FLAG_X: "true"
+
+ingress:
+  enabled: false
+  host: webapp.yourdomain.com
+  tlsSecretName: webapp-tls
+
+networkPolicy:
+  enabled: true
 
 revisionHistoryLimit: 3
-
-strategy:
-  maxSurge: 1
-  maxUnavailable: 0

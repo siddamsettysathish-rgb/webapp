@@ -1,0 +1,3 @@
+@echo off
+echo Starting WebApp proxy...
+kubectl proxy --port=8001
