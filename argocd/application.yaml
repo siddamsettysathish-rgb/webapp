@@ -6,9 +6,11 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/siddamsettysathish-rgb/webapp.git
+    repoURL: https://github.com/sathish19120/webapp.git
     targetRevision: main
-    path: k8s
+    path: helm/webapp
+    helm:
+      valueFiles: [values.yaml]
   destination:
     server: https://kubernetes.default.svc
     namespace: default
